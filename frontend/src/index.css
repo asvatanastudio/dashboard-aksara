@@ -1,0 +1,13 @@
+/* Masukkan lapisan dasar, komponen, dan utilitas Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tambahkan font Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+/* Atur font global */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f7f9fc; /* Latar belakang body agar dashboard terlihat menonjol */
+}

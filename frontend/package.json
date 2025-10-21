@@ -1,0 +1,37 @@
+{
+  "name": "organix-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "init-tailwind": "node ./node_modules/tailwindcss/lib/cli.js init -p"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "firebase": "^12.4.0",
+    "lucide-react": "^0.546.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.x.x",
+    "postcss": "^8.x.x",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^3.x.x"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
