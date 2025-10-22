@@ -1,57 +1,53 @@
-const jsonServer = require("json-server");
-const server = jsonServer.create();
-const router = jsonServer.router("db.json");
-const middlewares = jsonServer.defaults();
-const PORT = 3001;
+// Pastikan ini ada di baris paling atas
+import "dotenv/config";
 
-server.use(middlewares);
-server.use(jsonServer.bodyParser);
+import express from "express";
+import cors from "cors";
+// Hapus import yang berhubungan dengan pembacaan file db.json (misalnya 'fs')
 
-// Endpoint custom untuk registrasi (sekarang menyimpan ke db.json)
-server.post("/register", (req, res) => {
-  const { fullName, email, whatsapp, password } = req.body;
-  const db = router.db; // Dapatkan instance database
+// Impor fungsi-fungsi dari helper database yang baru
+import { getProducts, getProjects, getTeamMembers, getUsers } from "./lib/db.js";
 
-  if (!fullName || !email || !whatsapp || !password) {
-    return res.status(400).json({ message: "Semua kolom harus diisi" });
-  }
+const app = express();
+const port = process.env.PORT || 8000;
 
-  const userExists = db.get("users").find({ email: email }).value();
-  if (userExists) {
-    return res.status(400).json({ message: "Email sudah terdaftar" });
-  }
+app.use(cors());
+app.use(express.json());
 
-  const lastUser = db.get("users").value().slice(-1)[0];
-  const newId = lastUser ? lastUser.id + 1 : 1;
-
-  const newUser = { id: newId, fullName, email, whatsapp, password };
-  db.get("users").push(newUser).write(); // Tulis ke file db.json
-
-  console.log("Pengguna terdaftar:", newUser);
-  res.status(201).json({ message: "Registrasi berhasil" });
+// --- CONTOH RUTE LAMA (YANG HARUS DIHAPUS/DIGANTI) ---
+/*
+app.get('/products', (req, res) => {
+  // Logika lama membaca dari db.json
+  const data = JSON.parse(fs.readFileSync('db.json', 'utf-8'));
+  res.json(data.products);
 });
+*/
+// ---------------------------------------------------
 
-// Endpoint custom untuk login (sekarang membaca dari db.json)
-server.post("/login", (req, res) => {
-  const { email, password } = req.body;
-  const db = router.db;
-
-  if (!email || !password) {
-    return res.status(401).json({ message: "Email atau password salah" });
-  }
-
-  const user = db.get("users").find({ email: email, password: password }).value();
-
-  if (user) {
-    res.status(200).json({ message: "Login berhasil", user: { email: user.email, fullName: user.fullName } });
-  } else {
-    res.status(401).json({ message: "Email atau password salah" });
+// +++ CONTOH RUTE BARU DENGAN DATABASE VERCEL +++
+app.get("/products", async (req, res) => {
+  try {
+    const products = await getProducts(); // Panggil fungsi dari db.js
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-// Gunakan router dari JSON Server untuk rute API lainnya
-server.use("/api", router);
+// Terapkan pola yang sama untuk rute lainnya
+app.get("/projects", async (req, res) => {
+  try {
+    const projects = await getProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server & API Berhasil Berjalan di http://localhost:${PORT}`);
+// ...tambahkan rute untuk getTeamMembers dan getUsers
+
+app.listen(port, () => {
+  console.log(`Backend server running at http://localhost:${port}`);
 });
