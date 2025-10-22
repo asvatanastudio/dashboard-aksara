@@ -8,8 +8,14 @@ import { LayoutDashboard, Users, Clock, FileText, Settings, HelpCircle, LogOut, 
 // Daftarkan komponen Chart.js yang diperlukan
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
-// URL API Backend
-const API_URL = "http://localhost:3001/api";
+// =================================================================
+// 🔥🔥🔥 BAGIAN INI SUDAH DIPERBAIKI (Perubahan #1) 🔥🔥🔥
+// Mengambil URL publik dari Environment Variable (NEXT_PUBLIC_API_URL) saat di Vercel,
+// atau kembali ke localhost saat di Development lokal.
+// PASTIKAN Anda mengatur NEXT_PUBLIC_API_URL di Dashboard Vercel!
+// =================================================================
+const PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = `${PUBLIC_BACKEND_URL}/api`;
 
 // ===================================
 // KOMPONEN LOGIN
@@ -39,7 +45,9 @@ const Login = ({ onLoginSuccess }) => {
     }
 
     const endpoint = isRegistering ? "/register" : "/login";
-    const url = `http://localhost:3001${endpoint}`;
+
+    // 🔥🔥 Perubahan #2: Menggunakan PUBLIC_BACKEND_URL di sini 🔥🔥
+    const url = `${PUBLIC_BACKEND_URL}${endpoint}`;
 
     const body = isRegistering ? { fullName, email, whatsapp, password } : { email, password };
 
@@ -50,7 +58,12 @@ const Login = ({ onLoginSuccess }) => {
         body: JSON.stringify(body),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Terjadi kesalahan");
+
+      if (!response.ok) {
+        // Log error spesifik dari server jika ada
+        console.error("Server error response:", data);
+        throw new Error(data.message || "Terjadi kesalahan saat koneksi ke server.");
+      }
 
       if (isRegistering) {
         alert("Registrasi berhasil! Silakan login dengan akun Anda.");
@@ -59,7 +72,13 @@ const Login = ({ onLoginSuccess }) => {
         onLoginSuccess(data.user);
       }
     } catch (err) {
-      setError(err.message);
+      // Menangkap ERR_CONNECTION_REFUSED atau masalah server lainnya
+      console.error("Fetch error:", err);
+      if (err.message && err.message.includes("Failed to fetch")) {
+        setError("Koneksi gagal. Pastikan server backend sudah aktif dan URL di Vercel sudah benar.");
+      } else {
+        setError(err.message);
+      }
     }
   };
   return (
@@ -143,7 +162,7 @@ const Login = ({ onLoginSuccess }) => {
 };
 
 // ===================================
-// KOMPONEN-KOMPONEN KECIL
+// KOMPONEN-KOMPONEN KECIL (Tidak ada perubahan Fetch di sini)
 // ===================================
 const SidebarLink = ({ icon: Icon, title, isActive, onClick }) => {
   const baseClasses = "flex items-center space-x-3 p-3 text-sm font-medium rounded-xl transition duration-200 cursor-pointer";
@@ -194,7 +213,7 @@ const getStatusClass = (status) => {
 };
 
 // ===================================
-// KONTEN HALAMAN
+// KONTEN HALAMAN (Menggunakan API_URL yang sudah diperbaiki)
 // ===================================
 const HomePage = ({ navigateTo }) => {
   const menuItems = [
@@ -778,12 +797,15 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchData = async () => {
     try {
+      // Semua fetch di sini menggunakan API_URL yang sudah diperbaiki
       const [productsRes, projectsRes, teamRes] = await Promise.all([fetch(`${API_URL}/products`), fetch(`${API_URL}/projects`), fetch(`${API_URL}/teamMembers`)]);
       setProducts(await productsRes.json());
       setProjects(await projectsRes.json());
       setTeamMembers(await teamRes.json());
     } catch (error) {
-      showNotification("Gagal mengambil data dari server.", true);
+      // Menangkap error jika koneksi API gagal
+      showNotification("Gagal mengambil data dari server. Periksa koneksi backend.", true);
+      console.error("Fetch data error:", error);
     } finally {
       setLoading(false);
     }
