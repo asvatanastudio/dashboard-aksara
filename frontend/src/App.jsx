@@ -46,7 +46,7 @@ const Login = ({ onLoginSuccess }) => {
 
     const endpoint = isRegistering ? "/register" : "/login";
 
-    // 🔥🔥 Perubahan #2: Menggunakan PUBLIC_BACKEND_URL di sini 🔥🔥
+    // 🔥🔥 Perubahan #2: Menggunakan PUB LIC_BACKEND_URL di sini 🔥🔥
     const url = `${PUBLIC_BACKEND_URL}${endpoint}`;
 
     const body = isRegistering ? { fullName, email, whatsapp, password } : { email, password };
