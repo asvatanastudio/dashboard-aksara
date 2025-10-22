@@ -13,7 +13,9 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 // Fallback diatur langsung ke URL publik backend.
 // Ini memaksa browser untuk selalu memanggil domain publik (aksara-api).
 // =================================================================
+// Nilai ini harus diatur di Vercel: NEXT_PUBLIC_API_URL = https://aksara-api.vercel.app
 const PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://aksara-api.vercel.app";
+// 🔥 GANTI: API_URL akan menangani /api/ di depan semua route
 const API_URL = `${PUBLIC_BACKEND_URL}/api`;
 
 // ===================================
@@ -43,9 +45,10 @@ const Login = ({ onLoginSuccess }) => {
       }
     }
 
-    const endpoint = isRegistering ? "/register" : "/login";
+    // 🔥 PERBAIKAN ROUTING: Tambahkan /api ke endpoint
+    const endpoint = isRegistering ? "/api/register" : "/api/login";
 
-    // Menggunakan PUBLIC_BACKEND_URL yang sekarang tidak lagi mengandung localhost
+    // Menggunakan PUBLIC_BACKEND_URL
     const url = `${PUBLIC_BACKEND_URL}${endpoint}`;
 
     const body = isRegistering ? { fullName, email, whatsapp, password } : { email, password };
@@ -56,10 +59,24 @@ const Login = ({ onLoginSuccess }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await response.json();
 
+      // Tangani respons non-JSON (HTML error)
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const errorText = await response.text();
+        console.error("Server responded with non-JSON data:", errorText);
+        if (!response.ok) {
+          // Jika crash Vercel, kita toss error ini
+          throw new Error(`Kesalahan Server Vercel (Status: ${response.status}). Periksa Log Backend.`);
+        }
+        throw new Error("Respons server tidak valid.");
+      }
+
+      // Lanjutkan dengan logika status HTTP
       if (!response.ok) {
-        console.error("Server error response:", data);
         throw new Error(data.message || "Terjadi kesalahan saat koneksi ke server.");
       }
 
@@ -72,8 +89,9 @@ const Login = ({ onLoginSuccess }) => {
     } catch (err) {
       // Menangkap error fetch yang membandel
       console.error("Fetch error:", err);
-      if ((err.message && err.message.includes("Failed to fetch")) || err.message.includes("localhost")) {
-        setError("Koneksi gagal. Server API tidak merespons (Periksa Runtime Logs aksara-api).");
+      // 🔥 PESAN ERROR BARU YANG SANGAT JELAS
+      if ((err.message && err.message.includes("Failed to fetch")) || err.message.includes("localhost") || err instanceof TypeError) {
+        setError("KONEKSI DIBLOKIR. Periksa: (1) URL di Vercel, atau (2) Status Backend.");
       } else {
         setError(err.message);
       }
