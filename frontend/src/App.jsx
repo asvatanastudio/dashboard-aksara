@@ -9,12 +9,11 @@ import { LayoutDashboard, Users, Clock, FileText, Settings, HelpCircle, LogOut, 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 // =================================================================
-// 🔥🔥🔥 BAGIAN INI SUDAH DIPERBAIKI (Perubahan #1) 🔥🔥🔥
-// Mengambil URL publik dari Environment Variable (NEXT_PUBLIC_API_URL) saat di Vercel,
-// atau kembali ke localhost saat di Development lokal.
-// PASTIKAN Anda mengatur NEXT_PUBLIC_API_URL di Dashboard Vercel!
+// 🔥🔥🔥 PERBAIKAN AKHIR UNTUK MENGHILANGKAN JEJAK LOCALHOST 🔥🔥🔥
+// Fallback diatur langsung ke URL publik backend.
+// Ini memaksa browser untuk selalu memanggil domain publik (aksara-api).
 // =================================================================
-const PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://aksara-api.vercel.app";
 const API_URL = `${PUBLIC_BACKEND_URL}/api`;
 
 // ===================================
@@ -46,7 +45,7 @@ const Login = ({ onLoginSuccess }) => {
 
     const endpoint = isRegistering ? "/register" : "/login";
 
-    // 🔥🔥 Perubahan #2: Menggunakan PUB LIC_BACKEND_URL di sini 🔥🔥
+    // Menggunakan PUBLIC_BACKEND_URL yang sekarang tidak lagi mengandung localhost
     const url = `${PUBLIC_BACKEND_URL}${endpoint}`;
 
     const body = isRegistering ? { fullName, email, whatsapp, password } : { email, password };
@@ -60,7 +59,6 @@ const Login = ({ onLoginSuccess }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Log error spesifik dari server jika ada
         console.error("Server error response:", data);
         throw new Error(data.message || "Terjadi kesalahan saat koneksi ke server.");
       }
@@ -72,10 +70,10 @@ const Login = ({ onLoginSuccess }) => {
         onLoginSuccess(data.user);
       }
     } catch (err) {
-      // Menangkap ERR_CONNECTION_REFUSED atau masalah server lainnya
+      // Menangkap error fetch yang membandel
       console.error("Fetch error:", err);
-      if (err.message && err.message.includes("Failed to fetch")) {
-        setError("Koneksi gagal. Pastikan server backend sudah aktif dan URL di Vercel sudah benar.");
+      if ((err.message && err.message.includes("Failed to fetch")) || err.message.includes("localhost")) {
+        setError("Koneksi gagal. Server API tidak merespons (Periksa Runtime Logs aksara-api).");
       } else {
         setError(err.message);
       }
@@ -160,10 +158,7 @@ const Login = ({ onLoginSuccess }) => {
     </div>
   );
 };
-
-// ===================================
-// KOMPONEN-KOMPONEN KECIL (Tidak ada perubahan Fetch di sini)
-// ===================================
+// ... (Kode komponen Dashboard, ProductPage, ProjectPage, TeamPage, SettingPage, App tetap sama) ...
 const SidebarLink = ({ icon: Icon, title, isActive, onClick }) => {
   const baseClasses = "flex items-center space-x-3 p-3 text-sm font-medium rounded-xl transition duration-200 cursor-pointer";
   const activeClasses = isActive ? "bg-purple-600 text-white shadow-lg" : "text-gray-600 hover:bg-gray-100";
@@ -211,59 +206,23 @@ const getStatusClass = (status) => {
   };
   return statusMap[status] || "bg-gray-200 text-gray-800";
 };
-
-// ===================================
-// KONTEN HALAMAN (Menggunakan API_URL yang sudah diperbaiki)
-// ===================================
-const HomePage = ({ navigateTo }) => {
-  const menuItems = [
-    { title: "Manajemen Produk", page: "Product", icon: Package, description: "Kelola daftar produk, harga, dan stok." },
-    { title: "Manajemen Proyek", page: "Project", icon: FileText, description: "Lacak semua proyek yang sedang berjalan." },
-    { title: "Manajemen Tim", page: "Team", icon: Users, description: "Kelola anggota tim dan posisi mereka." },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Selamat Datang di Aksara Laserwork</h1>
-      <p className="text-gray-600">Pilih menu di bawah ini untuk memulai atau gunakan navigasi di samping.</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-        {menuItems.map((item) => (
-          <div key={item.page} onClick={() => navigateTo(item.page)} className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-transform cursor-pointer border-l-4 border-purple-500">
-            <div className="flex items-center space-x-4">
-              <item.icon className="w-8 h-8 text-purple-600" />
-              <h2 className="text-xl font-semibold text-gray-800">{item.title}</h2>
-            </div>
-            <p className="mt-2 text-gray-500 text-sm">{item.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const DashboardContent = ({ products, projects }) => {
-  // Statistik
   const totalStock = products.reduce((sum, product) => sum + product.qty, 0);
   const totalSold = projects.reduce((sum, project) => sum + project.qty, 0);
   const totalRevenue = projects.reduce((sum, project) => {
     const product = products.find((p) => p.id === project.productId);
     return product ? sum + project.qty * product.price : sum;
   }, 0);
-
-  // Data untuk Bar Chart Stok
   const barChartData = {
     labels: products.map((p) => p.name),
     datasets: [{ label: "Stok Saat Ini", data: products.map((p) => p.qty), backgroundColor: "rgba(139, 92, 246, 0.6)", borderColor: "rgba(139, 92, 246, 1)", borderWidth: 1 }],
   };
   const barChartOptions = { responsive: true, plugins: { legend: { display: false }, title: { display: true, text: "Grafik Stok Produk" } } };
-
-  // Data untuk Pie Chart Progres Proyek
   const statusCounts = projects.reduce((acc, project) => {
     const status = project.status || "Dibuat";
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
-
   const pieChartData = {
     labels: ["Dibuat", "Diproses", "Selesai"],
     datasets: [
@@ -310,7 +269,31 @@ const DashboardContent = ({ products, projects }) => {
   );
 };
 
-// Halaman Produk
+const HomePage = ({ navigateTo }) => {
+  const menuItems = [
+    { title: "Manajemen Produk", page: "Product", icon: Package, description: "Kelola daftar produk, harga, dan stok." },
+    { title: "Manajemen Proyek", page: "Project", icon: FileText, description: "Lacak semua proyek yang sedang berjalan." },
+    { title: "Manajemen Tim", page: "Team", icon: Users, description: "Kelola anggota tim dan posisi mereka." },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-gray-800">Selamat Datang di Aksara Laserwork</h1>
+      <p className="text-gray-600">Pilih menu di bawah ini untuk memulai atau gunakan navigasi di samping.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        {menuItems.map((item) => (
+          <div key={item.page} onClick={() => navigateTo(item.page)} className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-transform cursor-pointer border-l-4 border-purple-500">
+            <div className="flex items-center space-x-4">
+              <item.icon className="w-8 h-8 text-purple-600" />
+              <h2 className="text-xl font-semibold text-gray-800">{item.title}</h2>
+            </div>
+            <p className="mt-2 text-gray-500 text-sm">{item.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 const ProductPage = ({ products, fetchData, showNotification }) => {
   const [formData, setFormData] = useState({ name: "", price: "", qty: "" });
   const [isEditing, setIsEditing] = useState(null);
@@ -408,8 +391,6 @@ const ProductPage = ({ products, fetchData, showNotification }) => {
     </div>
   );
 };
-
-// Halaman Proyek
 const ProjectPage = ({ projects, products, fetchData, showNotification }) => {
   const [formData, setFormData] = useState({ customer: "", productId: "", qty: "", pic: "", status: "Dibuat" });
   const [isEditing, setIsEditing] = useState(null);
@@ -578,8 +559,6 @@ const ProjectPage = ({ projects, products, fetchData, showNotification }) => {
     </div>
   );
 };
-
-// Halaman Tim
 const TeamPage = ({ teamMembers, fetchData, showNotification }) => {
   const [formData, setFormData] = useState({ id: "", name: "", address: "", position: "" });
   const [isEditing, setIsEditing] = useState(null);
@@ -684,8 +663,6 @@ const TeamPage = ({ teamMembers, fetchData, showNotification }) => {
     </div>
   );
 };
-
-// Halaman Setting
 const SettingPage = ({ user, showNotification, profilePic, setProfilePic }) => {
   const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
 
@@ -777,10 +754,6 @@ const SettingPage = ({ user, showNotification, profilePic, setProfilePic }) => {
     </div>
   );
 };
-
-// ===================================
-// KOMPONEN UTAMA DASHBOARD
-// ===================================
 const Dashboard = ({ user, onLogout }) => {
   const [activePage, setActivePage] = useState("Dashboard");
   const [products, setProducts] = useState([]);
@@ -797,15 +770,12 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchData = async () => {
     try {
-      // Semua fetch di sini menggunakan API_URL yang sudah diperbaiki
       const [productsRes, projectsRes, teamRes] = await Promise.all([fetch(`${API_URL}/products`), fetch(`${API_URL}/projects`), fetch(`${API_URL}/teamMembers`)]);
       setProducts(await productsRes.json());
       setProjects(await projectsRes.json());
       setTeamMembers(await teamRes.json());
     } catch (error) {
-      // Menangkap error jika koneksi API gagal
-      showNotification("Gagal mengambil data dari server. Periksa koneksi backend.", true);
-      console.error("Fetch data error:", error);
+      showNotification("Gagal mengambil data dari server.", true);
     } finally {
       setLoading(false);
     }
@@ -887,10 +857,6 @@ const Dashboard = ({ user, onLogout }) => {
     </div>
   );
 };
-
-// ===================================
-// KOMPONEN INDUK APP
-// ===================================
 function App() {
   const [user, setUser] = useState(null);
   const handleLoginSuccess = (userData) => {
